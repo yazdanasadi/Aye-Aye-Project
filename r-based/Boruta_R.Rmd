@@ -1,0 +1,102 @@
+```         
+---
+title: "EDA Notebook R"
+output: ayeaye_R_notebook
+---
+```
+
+```         
+```
+
+```{r}
+library(Boruta)
+library(xgboost)
+library(randomForest)
+library(glmnet)
+library(caret)
+library(corrr)
+
+
+
+# Preprocessing
+data <- read.csv('/Users/yazda/Desktop/AyeAye2024/Aye-Aye-Project/data/LEK/LEK_data_grouped.csv', sep=';')
+head(data, 10)
+colnames(data)
+data$nr.month.low.supply[is.na(data$nr.month.low.supply)] <- median(data$nr.month.low.supply, na.rm = TRUE)
+columns_to_cast <- c('Forest.cover2018', 'Forest.cover1990', 'Forestloss_total', 'Forestloss_relative')
+for (column in columns_to_cast) {
+  data[[column]] <- as.numeric(gsub(',', '.', data[[column]]))
+}
+# age columns removed
+selected_columns_dm <- data[, c('Clove.benefit.score', 'nr.month.low.supply', 'Region', 'Village', 'Gender',
+                                'schooling.years', 'Ethnic.group', 'Migration.Experience', 'Farms.Cloves', 
+                                'encountered.binary', 'ID.vis.Aye.aye', 'ID.nom', 'Knowledge.non.benefit.score.max.6', 
+                                'DK.score', 'Diet.Insects', 'Knowledge.signs', 'Remoteness', 'village.size', 'School', 
+                                'Forest.cover2018', 'Forest.cover1990', 'Forestloss_total', 'Forestloss_relative', 
+                                'Farms.Paddy.Rice', 'Farms.Tavy.Rice', 'Extracts.Medical.plants', 'FES.provisioning', 
+                                'FES.regulating', 'FES.cultural', 'FES.supporting', 'ID.vis.Indri', 'ID.vis.Microcebus', 
+                                'Aye.aye.protected')]
+# Removed 'Region', 'Village', 'Gender', 'Age', 'schooling.years', 'Ethnic.group', 'Migration.Experience'
+selected_columns_ndm <- data[, c('Clove.benefit.score', 'nr.month.low.supply', 'Farms.Cloves', 'encountered.binary',
+                                 'ID.vis.Aye.aye', 'ID.nom', 'Knowledge.non.benefit.score.max.6', 'DK.score', 
+                                 'Diet.Insects', 'Knowledge.signs', 'Remoteness', 'village.size', 'School', 
+                                 'Forest.cover2018', 'Forest.cover1990', 'Forestloss_total', 'Forestloss_relative', 
+                                 'Farms.Paddy.Rice', 'Farms.Tavy.Rice', 'Extracts.Medical.plants', 'FES.provisioning', 
+                                 'FES.regulating', 'FES.cultural', 'FES.supporting', 'ID.vis.Indri', 'ID.vis.Microcebus', 
+                                 'Aye.aye.protected')]
+selected_columns_ndm_noforest <- data[, c('Clove.benefit.score', 'nr.month.low.supply', 'Farms.Cloves', 'encountered.binary', 
+                                          'ID.vis.Aye.aye', 'ID.nom', 'Knowledge.non.benefit.score.max.6', 'DK.score', 
+                                          'Diet.Insects', 'Knowledge.signs', 'Remoteness', 'village.size', 'School', 
+                                          'Farms.Paddy.Rice', 'Farms.Tavy.Rice', 'Extracts.Medical.plants', 'FES.provisioning', 
+                                          'FES.regulating', 'FES.cultural', 'FES.supporting', 'ID.vis.Indri', 'ID.vis.Microcebus', 
+                                          'Aye.aye.protected')]
+selected_columns_ndm_noforest_ndk <- data[, c('Clove.benefit.score', 'nr.month.low.supply', 'Farms.Cloves', 'encountered.binary', 
+                                              'ID.vis.Aye.aye', 'ID.nom', 'Knowledge.non.benefit.score.max.6', 'Diet.Insects', 
+                                              'Knowledge.signs', 'Remoteness', 'village.size', 'School', 'Farms.Paddy.Rice', 
+                                              'Farms.Tavy.Rice', 'Extracts.Medical.plants', 'FES.provisioning', 'FES.regulating', 
+                                              'FES.cultural', 'FES.supporting', 'ID.vis.Indri', 'ID.vis.Microcebus', 
+                                              'Aye.aye.protected')]
+
+# Print data types of each column in the dataframe
+column_dtypes <- sapply(selected_columns_dm, class)
+print(column_dtypes)
+
+
+feature_selection_and_correlation <- function(d, target_col, n_features = 7) {
+  # Data Preparation
+  X <- d[, !(names(d) %in% target_col)]
+  y <- d[[target_col]]
+  
+  # Apply StandardScaler
+  scaler <- preProcess(X, method = c("center", "scale"))
+  X_scaled <- predict(scaler, X)
+  
+  # Boruta Algorithm
+  set.seed(42)  # For reproducibility
+  rf_boruta <- randomForest(X_scaled, as.factor(y), ntree = 500, maxnodes = 5, importance = TRUE)
+  boruta <- Boruta(X_scaled, as.factor(y), doTrace = 0, maxRuns = 100)
+  
+  # Get selected features
+  boruta_features <- getSelectedAttributes(boruta, withTentative = FALSE)
+  selected_features <- head(boruta_features, min(n_features, length(boruta_features)))
+  
+  return(list(boruta_features = selected_features))
+}
+
+# Apply the function to the data subsets
+result_DM <- feature_selection_and_correlation(selected_columns_dm, 'Clove.benefit.score')
+print(result_DM$selected_features)
+print(result_DM$correlations)
+
+result_NDM <- feature_selection_and_correlation(selected_columns_ndm, 'Clove.benefit.score')
+print(result_NDM$selected_features)
+print(result_NDM$correlations)
+
+result_NDM_nf <- feature_selection_and_correlation(selected_columns_ndm_noforest, 'Clove.benefit.score')
+print(result_NDM_nf$selected_features)
+print(result_NDM_nf$correlations)
+
+result_NDM_nf_ndk <- feature_selection_and_correlation(selected_columns_ndm_noforest_ndk, 'Clove.benefit.score')
+print(result_NDM_nf_ndk$selected_features)
+print(result_NDM_nf_ndk$correlations)
+```
