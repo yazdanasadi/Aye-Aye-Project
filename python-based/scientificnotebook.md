@@ -1,5 +1,3 @@
-# Aye-Aye-Project
-Our Main Repository For Aye-Aye Project
 ### Scientific Notebook of Aye Aye Project Update 23.08.2024
 
 This notebook outlines the data preprocessing steps performed by the `LEK_data_grouped` module. To utilize this module, ensure the installation of the following packages: NumPy, Pandas, scikit-learn, XGBoost, Seaborn, and SHAP **(using either Conda or pip package managers)**.
